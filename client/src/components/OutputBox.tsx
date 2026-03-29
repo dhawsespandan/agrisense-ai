@@ -12,7 +12,7 @@ export default function OutputBox({ result, previewUrl, onReset }: OutputBoxProp
   return (
     <div className="w-full flex gap-6 items-start">
       {/* Left — image + reset */}
-      <div className="w-[40%] flex-shrink-0 flex flex-col gap-4">
+      <div className="w-[40%] shrink-0 flex flex-col gap-4">
         <div
           className="w-full rounded-3xl overflow-hidden"
           style={{
@@ -57,7 +57,7 @@ export default function OutputBox({ result, previewUrl, onReset }: OutputBoxProp
           }}
         >
           <div
-            className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+            className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
             style={{
               background: isHealthy
                 ? "linear-gradient(135deg, #3d7a34, #1f4a18)"
@@ -83,7 +83,7 @@ export default function OutputBox({ result, previewUrl, onReset }: OutputBoxProp
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#aaa] mb-1">Detection Result</p>
             <p className="text-[17px] font-bold text-[#111] leading-snug">{result.disease}</p>
           </div>
-          <div className="flex-shrink-0 text-right">
+          <div className="shrink-0 text-right">
             <p className="text-[10px] text-[#bbb] uppercase tracking-wider mb-1">Confidence</p>
             <span className={`text-[17px] font-bold ${isHealthy ? "text-[#2d5a27]" : "text-[#c47a10]"}`}>
               {result.confidence}
@@ -93,19 +93,23 @@ export default function OutputBox({ result, previewUrl, onReset }: OutputBoxProp
 
         {/* Body */}
         <div className="px-6 py-5 space-y-5">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#bbb] mb-1.5">Severity</p>
-            <p className="text-[14px] font-medium text-[#333]">{result.severity}</p>
-          </div>
+          {result.image_type === "fruit" && (
+            <>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#bbb] mb-1.5">Severity</p>
+                <p className="text-[14px] font-medium text-[#333]">{result.severity}</p>
+              </div>
 
-          <div className="h-px bg-gradient-to-r from-transparent via-[#ece8e2] to-transparent" />
+              <div className="h-px bg-linear-to-r from-transparent via-[#ece8e2] to-transparent" />
+            </>
+          )}
 
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#bbb] mb-1.5">Findings</p>
             <p className="text-[14px] text-[#555] leading-[1.7]">{result.details}</p>
           </div>
 
-          <div className="h-px bg-gradient-to-r from-transparent via-[#ece8e2] to-transparent" />
+          <div className="h-px bg-linear-to-r from-transparent via-[#ece8e2] to-transparent" />
 
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#bbb] mb-2">Recommended Action</p>

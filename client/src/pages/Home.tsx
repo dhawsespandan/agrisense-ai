@@ -2,7 +2,6 @@ import { useState, useCallback } from "react";
 import Header from "@/components/Header";
 import ImageInput from "@/components/ImageInput";
 import OutputBox from "@/components/OutputBox";
-import { MOCK_RESULTS } from "@/constants";
 import type { ResultStatus, DetectionResult } from "@/types";
 
 export default function Home() {
@@ -10,18 +9,39 @@ export default function Home() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<ResultStatus>("idle");
   const [result, setResult] = useState<DetectionResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [activeNav, setActiveNav] = useState("Detection");
 
-  const processFile = useCallback((file: File) => {
+  const processFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) return;
+
     setPreviewUrl(URL.createObjectURL(file));
     setStatus("loading");
     setResult(null);
-    // TODO: replace with real API call to /api/analyze
-    setTimeout(() => {
-      setResult(MOCK_RESULTS[Math.floor(Math.random() * MOCK_RESULTS.length)]);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Analysis failed");
+      }
+
+      setResult(data);
       setStatus("success");
-    }, 2200);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
+      setStatus("error");
+    }
   }, []);
 
   const handleDrop = (e: React.DragEvent) => {
@@ -45,6 +65,7 @@ export default function Home() {
     setPreviewUrl(null);
     setStatus("idle");
     setResult(null);
+    setError(null);
   };
 
   return (
@@ -54,12 +75,10 @@ export default function Home() {
     >
       <Header activeNav={activeNav} onNavChange={setActiveNav} />
 
-      {/* ── Idle / Loading: vertically centered like Claude ── */}
+      {/* Idle / Loading / Error — vertically centered */}
       {status !== "success" && (
         <main className="flex-1 flex flex-col items-center justify-center px-8 gap-8 w-full">
           <div className="w-full max-w-2xl flex flex-col items-center gap-8">
-
-            {/* Title block */}
             <div className="text-center">
               <h1 className="text-[26px] font-bold text-[#111] tracking-tight leading-tight">
                 Diagnose Your Apple Crop
@@ -69,7 +88,6 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Upload box */}
             <ImageInput
               status={status}
               previewUrl={previewUrl}
@@ -81,11 +99,24 @@ export default function Home() {
               onReset={handleReset}
               onBrowseClick={() => {}}
             />
+
+            {/* Error state */}
+            {status === "error" && error && (
+              <div
+                className="w-full rounded-2xl px-5 py-4 text-[13px] text-[#c0392b] font-medium"
+                style={{
+                  background: "linear-gradient(135deg, #fff5f5, #fff0f0)",
+                  border: "1px solid #f5c6c6",
+                }}
+              >
+                ⚠ {error}
+              </div>
+            )}
           </div>
         </main>
       )}
 
-      {/* ── Success: top-anchored two-column layout ── */}
+      {/* Success — top-anchored two-column */}
       {status === "success" && result && previewUrl && (
         <main className="flex-1 flex flex-col items-center px-8 py-12 w-full">
           <div className="w-full max-w-5xl">

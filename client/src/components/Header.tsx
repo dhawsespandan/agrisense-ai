@@ -8,14 +8,14 @@ interface HeaderProps {
 export default function Header({ activeNav, onNavChange }: HeaderProps) {
   return (
     <header
-      className="bg-white/80 backdrop-blur-md border-b border-[#e2ddd6]/80 px-8 flex items-center gap-4 h-[60px] sticky top-0 z-10"
+      className="bg-white/80 backdrop-blur-md border-b border-[#e2ddd6]/80 px-8 flex items-center gap-4 h-15 sticky top-0 z-10"
       style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.03)" }}
     >
       {/* Logo */}
       <div className="flex items-center gap-3">
-        <div className="relative w-9 h-9 flex-shrink-0">
+        <div className="relative w-9 h-9 shrink-0">
           <div
-            className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#3d7a34] to-[#1f4a18]"
+            className="absolute inset-0 rounded-xl bg-linear-to-br from-[#3d7a34] to-[#1f4a18]"
             style={{ boxShadow: "0 2px 8px rgba(45,90,39,0.35)" }}
           />
           <div className="relative w-full h-full flex items-center justify-center">
