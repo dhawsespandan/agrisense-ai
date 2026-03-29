@@ -25,8 +25,22 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     return res.json(pythonRes.data);
   } catch (err) {
+    if (err.response) {
+      const { status, data } = err.response;
+      console.error("Analysis error (upstream):", status, data);
+      if (data && typeof data === "object") {
+        return res.status(status).json(data);
+      }
+      return res.status(status).json({
+        error: typeof data === "string" ? data : "Analysis failed",
+      });
+    }
     console.error("Analysis error:", err.message);
-    return res.status(500).json({ error: "Analysis failed", detail: err.message });
+    const code = err.code === "ECONNREFUSED" ? 503 : 502;
+    return res.status(code).json({
+      error: "Model service unavailable",
+      detail: err.message,
+    });
   }
 });
 

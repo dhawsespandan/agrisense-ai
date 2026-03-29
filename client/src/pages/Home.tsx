@@ -29,13 +29,23 @@ export default function Home() {
         body: formData,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Analysis failed");
+      const text = await res.text();
+      let payload: Record<string, unknown> = {};
+      try {
+        payload = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+      } catch {
+        throw new Error(text?.slice(0, 200) || "Invalid response from server");
       }
 
-      setResult(data);
+      if (!res.ok) {
+        const msg =
+          (typeof payload.error === "string" && payload.error) ||
+          (typeof payload.detail === "string" && payload.detail) ||
+          `Analysis failed (${res.status})`;
+        throw new Error(msg);
+      }
+
+      setResult(payload as DetectionResult);
       setStatus("success");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong";
