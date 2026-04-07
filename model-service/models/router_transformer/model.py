@@ -99,9 +99,15 @@ def _load_lora() -> bool:
             idx   = probs.argmax().item()
             conf  = probs[idx].item()
             label = _CLASSES[idx]
+            api_label = _INTERNAL_TO_API.get(label, label)
+            # Always route fruit images even when confidence is low —
+            # blurry/close-up fruit shots score below the general threshold
+            # but should still reach the fruit disease module.
+            if api_label == "fruit":
+                return "fruit", conf
             if conf < _UNKNOWN_THRESH:
                 return "unknown", conf
-            return _INTERNAL_TO_API.get(label, label), conf
+            return api_label, conf
 
         _predict_fn = _fn
         return True
@@ -160,9 +166,15 @@ def _load_efficientnet():
         idx   = probs.argmax().item()
         conf  = probs[idx].item()
         label = _CLASSES[idx]
+        api_label = _INTERNAL_TO_API.get(label, label)
+        # Always route fruit images even when confidence is low —
+        # blurry/close-up fruit shots score below the general threshold
+        # but should still reach the fruit disease module.
+        if api_label == "fruit":
+            return "fruit", conf
         if conf < _UNKNOWN_THRESH:
             return "unknown", conf
-        return _INTERNAL_TO_API.get(label, label), conf
+        return api_label, conf
 
     _predict_fn = _fn
 

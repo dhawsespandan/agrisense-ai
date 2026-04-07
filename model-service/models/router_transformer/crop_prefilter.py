@@ -10,22 +10,24 @@ and will blindly assign one of the three crop classes to anything.
 
 Pipeline
 --------
-   image  →  CLIP  →  P("apple leaf, fruit or flower")
-                       P("not an apple crop")
-           ≥ threshold  →  True (pass through)
-           < threshold  →  False (reject with 'unknown')
+   image  →  CLIP (general check)
+                  P("apple leaf, fruit or flower") >= CROP_PREFILTER_THRESHOLD  → pass
+                  else → CLIP (fruit-specific check)
+                              P("apple fruit") >= FRUIT_PREFILTER_THRESHOLD  → pass
+                              else → reject with 'unknown'
 
-The CLIP model (openai/clip-vit-base-patch32) is lazy-loaded on first call
-and shared with apple_detector.py if that module is already imported.
+Two-stage design ensures blurry or dark fruit images that score low on the
+general label still get a second chance via a fruit-specific prompt, while
+clearly non-crop images (e.g. random photos) are still rejected.
 
 Environment variables
 ---------------------
 CROP_PREFILTER_THRESHOLD : float  (default 0.50)
-    Minimum CLIP probability for the apple-crop label to let the image
-    through.  0.50 is deliberately lenient so borderline close-ups
-    (e.g. a single flower petal or small fruit section) still pass.
-    Raise it to be stricter; lower it only if real crop images are
-    being rejected.
+    Minimum CLIP probability for the general apple-crop label.
+FRUIT_PREFILTER_THRESHOLD : float  (default 0.30)
+    Minimum CLIP probability for the fruit-specific fallback check.
+    Lower than the general threshold because blurry/dark fruit images
+    naturally score lower on composite labels.
 """
 
 import os
@@ -36,15 +38,23 @@ from PIL import Image
 DEVICE = os.getenv("DEVICE", "cpu")
 _HF_DEVICE = 0 if DEVICE == "cuda" else -1
 
-CROP_THRESHOLD = float(os.getenv("CROP_PREFILTER_THRESHOLD", "0.50"))
+CROP_THRESHOLD  = float(os.getenv("CROP_PREFILTER_THRESHOLD",  "0.50"))
+FRUIT_THRESHOLD = float(os.getenv("FRUIT_PREFILTER_THRESHOLD", "0.30"))
 
-# Candidate labels. Keep them concise — CLIP performs best with short,
-# descriptive noun phrases.
+# General candidate labels
 _LABELS = [
     "apple leaf, fruit or flower cluster",
     "not an apple crop image",
 ]
 _CROP_LABEL = "apple leaf, fruit or flower cluster"
+
+# Fruit-specific fallback labels — shorter, more concrete prompts that CLIP
+# handles better for close-up or blurry apple fruit images.
+_FRUIT_LABELS = [
+    "apple fruit",
+    "not an apple",
+]
+_FRUIT_LABEL = "apple fruit"
 
 _pipeline = None
 
@@ -95,10 +105,28 @@ def is_apple_crop(image: Image.Image) -> tuple[bool, float]:
         return True, -1.0
 
     img_rgb = image.convert("RGB")
-    results = _pipeline(img_rgb, candidate_labels=_LABELS)
 
+    # ── Stage 1: general crop check ──────────────────────────────────────
+    results = _pipeline(img_rgb, candidate_labels=_LABELS)
     crop_score = next(
         (r["score"] for r in results if r["label"] == _CROP_LABEL), 0.0
     )
 
-    return crop_score >= CROP_THRESHOLD, round(crop_score, 4)
+    if crop_score >= CROP_THRESHOLD:
+        return True, round(crop_score, 4)
+
+    # ── Stage 2: fruit-specific fallback ─────────────────────────────────
+    # Blurry, dark, or close-up fruit images can score below the general
+    # threshold even though they are clearly apple fruit.  A targeted
+    # two-class prompt gives CLIP a much better signal.
+    fruit_results = _pipeline(img_rgb, candidate_labels=_FRUIT_LABELS)
+    fruit_score = next(
+        (r["score"] for r in fruit_results if r["label"] == _FRUIT_LABEL), 0.0
+    )
+
+    if fruit_score >= FRUIT_THRESHOLD:
+        print(f"[crop_prefilter] General check failed ({crop_score:.3f}), "
+              f"but fruit-specific check passed ({fruit_score:.3f}) — forwarding to router")
+        return True, round(fruit_score, 4)
+
+    return False, round(crop_score, 4)

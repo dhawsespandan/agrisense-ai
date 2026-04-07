@@ -54,19 +54,22 @@ _NORM_STD  = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32).view(1, 3,
 # ── build model ───────────────────────────────────────────────────────────────
 
 def _build_trained_model() -> nn.Module:
-    """Architecture matching what train.py saves."""
+    """Architecture matching what train.py saves (v4).
+    4-layer head, linear output — clamped to [0,100] at inference."""
     m = models.efficientnet_b4(weights=None)
     feat_dim = m.classifier[1].in_features   # 1792
     m.classifier = nn.Sequential(
         m.classifier[0],                      # Dropout(p=0.4)
         nn.Linear(feat_dim, 512),
         nn.ReLU(),
-        nn.Dropout(0.4),
-        nn.Linear(512, 128),
+        nn.Dropout(0.3),
+        nn.Linear(512, 256),
         nn.ReLU(),
         nn.Dropout(0.2),
-        nn.Linear(128, 1),
-        nn.Sigmoid(),
+        nn.Linear(256, 64),
+        nn.ReLU(),
+        nn.Linear(64, 1),
+        # No Sigmoid — linear output, clamped to [0,100] at inference
     )
     return m
 
@@ -185,7 +188,7 @@ def predict_severity(tensor: torch.Tensor) -> float:
     tensor = (tensor - _NORM_MEAN) / _NORM_STD
 
     with torch.no_grad():
-        raw = _model(tensor).item()   # Sigmoid output in (0, 1)
+        raw = _model(tensor).item()   # linear output; clamp to [0, 1]
 
-    pct = raw * 100.0
-    return round(max(0.0, min(100.0, pct)), 2)
+    pct = max(0.0, min(1.0, raw)) * 100.0
+    return round(pct, 2)
