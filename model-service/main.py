@@ -234,14 +234,16 @@ def _flower_severity(label: str) -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load all ML models at startup and store them in app.state."""
-    import models.router_transformer.model as _router_mod
-    import models.fruit_disease.model      as _fruit_mod
-    import models.fruit_severity.model     as _severity_mod
-    import models.leaf_disease.model       as _leaf_mod
-    import models.flower_cluster.model     as _flower_mod
+    import models.router_transformer.model            as _router_mod
+    import models.router_transformer.crop_prefilter   as _prefilter_mod
+    import models.fruit_disease.model                 as _fruit_mod
+    import models.fruit_severity.model                as _severity_mod
+    import models.leaf_disease.model                  as _leaf_mod
+    import models.flower_cluster.model                as _flower_mod
     from utils.preprocess import preprocess_image, to_severity_tensor
 
     app.state.predict_route    = _router_mod.predict_route
+    app.state.is_apple_crop    = _prefilter_mod.is_apple_crop
     app.state.predict_fruit    = _fruit_mod.predict_fruit
     app.state.predict_severity = _severity_mod.predict_severity
     app.state.predict_leaf     = _leaf_mod.predict_leaf
@@ -346,12 +348,30 @@ async def predict(request: Request, file: UploadFile = File(...)):
         raise HTTPException(422, detail=f"Cannot read image: {exc}")
 
     # ── pull model callables from app.state ──────────────────────────────
+    is_apple_crop    = request.app.state.is_apple_crop
     predict_route    = request.app.state.predict_route
     predict_fruit    = request.app.state.predict_fruit
     predict_severity = request.app.state.predict_severity
     predict_leaf     = request.app.state.predict_leaf
     predict_flowers  = request.app.state.predict_flowers
     sev_preprocess   = request.app.state.sev_preprocess
+
+    # ── gate-0: CLIP crop pre-filter ────────────────────────────────────
+    # Reject images that are clearly not apple leaf / fruit / flower before
+    # the router ever sees them.  The router was trained only on crop images
+    # and will assign one of the three crop classes to *anything*.
+    crop_ok, crop_conf = is_apple_crop(image)
+    if not crop_ok:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": (
+                    "Image not identified as a leaf, flower, or fruit image. "
+                    "Please upload a clear photo of an apple leaf, fruit, or flower cluster."
+                ),
+                "error_type": "unrecognized_image",
+            },
+        )
 
     # ── router ───────────────────────────────────────────────────────────
     image_type, router_conf = predict_route(image)
@@ -361,17 +381,31 @@ async def predict(request: Request, file: UploadFile = File(...)):
             status_code=422,
             content={
                 "error": (
-                    "Could not classify image. "
-                    "Please upload a clear image of an apple leaf, "
-                    "fruit, or flower cluster."
-                )
+                    "Image not identified as a leaf, flower, or fruit image. "
+                    "Please upload a clear photo of an apple leaf, fruit, or flower cluster."
+                ),
+                "error_type": "unrecognized_image",
             },
         )
 
     # ── fruit branch ─────────────────────────────────────────────────────
     if image_type == "fruit":
         label, conf = predict_fruit(file_path)
-        info        = _get_info(label)
+
+        # Fruit pre-filter (CLIP apple detector) rejected the image
+        if label == "Not an apple image.":
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "error": (
+                        "Image not identified as an apple fruit. "
+                        "Please upload a clear photo of an apple fruit for disease detection."
+                    ),
+                    "error_type": "unrecognized_image",
+                },
+            )
+
+        info = _get_info(label)
 
         if label.lower() == "healthy":
             severity_str = "None — no disease detected"
@@ -390,9 +424,22 @@ async def predict(request: Request, file: UploadFile = File(...)):
 
     # ── leaf branch ──────────────────────────────────────────────────────
     if image_type == "leaf":
-        tensor     = sev_preprocess(image)
-        label, conf = predict_leaf(tensor)
-        info        = _get_info(label)
+        label, conf = predict_leaf(image)   # PIL image; CLIP gate runs inside
+
+        # Leaf pre-filter rejected the image
+        if label == "Not an apple leaf image.":
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "error": (
+                        "Image not identified as an apple leaf. "
+                        "Please upload a clear photo of an apple leaf for disease detection."
+                    ),
+                    "error_type": "unrecognized_image",
+                },
+            )
+
+        info = _get_info(label)
 
         return PredictionResponse(
             image_type   = "leaf",

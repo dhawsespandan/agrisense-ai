@@ -10,6 +10,7 @@ export default function Home() {
   const [status, setStatus] = useState<ResultStatus>("idle");
   const [result, setResult] = useState<DetectionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<string | null>(null);
   const [activeNav, setActiveNav] = useState("Detection");
 
   const processFile = useCallback(async (file: File) => {
@@ -19,6 +20,7 @@ export default function Home() {
     setStatus("loading");
     setResult(null);
     setError(null);
+    setErrorType(null);
 
     try {
       const formData = new FormData();
@@ -42,6 +44,8 @@ export default function Home() {
           (typeof payload.error === "string" && payload.error) ||
           (typeof payload.detail === "string" && payload.detail) ||
           `Analysis failed (${res.status})`;
+        const eType = typeof payload.error_type === "string" ? payload.error_type : null;
+        setErrorType(eType);
         throw new Error(msg);
       }
 
@@ -76,6 +80,7 @@ export default function Home() {
     setStatus("idle");
     setResult(null);
     setError(null);
+    setErrorType(null);
   };
 
   return (
@@ -112,15 +117,47 @@ export default function Home() {
 
             {/* Error state */}
             {status === "error" && error && (
-              <div
-                className="w-full rounded-2xl px-5 py-4 text-[13px] text-[#c0392b] font-medium"
-                style={{
-                  background: "linear-gradient(135deg, #fff5f5, #fff0f0)",
-                  border: "1px solid #f5c6c6",
-                }}
-              >
-                ⚠ {error}
-              </div>
+              errorType === "unrecognized_image" ? (
+                <div
+                  className="w-full rounded-2xl overflow-hidden"
+                  style={{
+                    border: "1px solid #e8d9c0",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)",
+                  }}
+                >
+                  <div
+                    className="px-5 py-4 flex items-start gap-4"
+                    style={{ background: "linear-gradient(to right, #fdf6ec, #fefaf4)" }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+                      style={{ background: "linear-gradient(135deg, #e0a020, #c47a10)", boxShadow: "0 4px 10px rgba(180,100,20,0.25)" }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        <line x1="11" y1="8" x2="11" y2="14"/><line x1="11" y1="16" x2="11.01" y2="16"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-[#c47a10] mb-1">Image Not Recognised</p>
+                      <p className="text-[14px] font-semibold text-[#333] leading-snug">Not a leaf, flower, or fruit image</p>
+                      <p className="text-[13px] text-[#888] mt-1.5 leading-relaxed">
+                        Please upload a clear photo of an apple leaf, fruit, or flower cluster for accurate disease detection.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="w-full rounded-2xl px-5 py-4 text-[13px] text-[#c0392b] font-medium"
+                  style={{
+                    background: "linear-gradient(135deg, #fff5f5, #fff0f0)",
+                    border: "1px solid #f5c6c6",
+                  }}
+                >
+                  ⚠ {error}
+                </div>
+              )
             )}
           </div>
         </main>
