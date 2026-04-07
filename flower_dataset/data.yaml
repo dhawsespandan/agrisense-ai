@@ -1,0 +1,7 @@
+names:
+- apple_flower
+nc: 1
+path: /content/apple_flower_3000
+test: test/images
+train: train/images
+val: valid/images
