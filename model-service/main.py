@@ -209,7 +209,9 @@ def _get_info(disease: str) -> dict:
 # The regression model is trained on polygon-annotation labels that
 # systematically under-capture certain disease patterns:
 #   • Blotch  – irregular, coalescing spots; annotators miss partial coverage
-#   • Scab    – numerous tiny lesions; polygon ceiling in training data ≈ 54 %
+#   • Scab    – numerous tiny lesions; polygon ceiling in training data ≈ 54 %;
+#              diffuse inter-lesion spread is systematically missed by annotators,
+#              requiring a higher correction factor (raw ≈ 30 % → visual ≈ 60 %)
 # Calibration factors correct for these annotation biases so the displayed
 # severity better matches the visual extent of each disease.
 # Rot is very accurately annotated (large, contiguous lesion) → near 1.
@@ -219,7 +221,7 @@ _SEVERITY_CALIBRATION: dict[str, float] = {
     "Anthracnose": 1.10,
     "Blotch":      1.35,
     "Rot":         0.50,
-    "Scab":        1.65,
+    "Scab":        2.02,
 }
 
 
