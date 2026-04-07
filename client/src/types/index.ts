@@ -7,4 +7,5 @@ export interface DetectionResult {
   confidence: string;
   recommendation: string;
   details: string;
+  flower_count?: number;
 }

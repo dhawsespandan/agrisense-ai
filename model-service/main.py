@@ -164,8 +164,20 @@ _DISEASE_INFO: dict[str, dict] = {
             "maggot) and ensure adequate pollinator access during bloom."
         ),
         "details": (
-            "Flower clusters appear healthy with good density. Conditions are "
-            "favourable for pollination and fruit set. Expected yield is normal."
+            "Flower clusters are abundant and dense. Conditions are highly favourable "
+            "for pollination and fruit set. Expected yield is at or above normal."
+        ),
+    },
+    "Adequate Clusters": {
+        "recommendation": (
+            "Flowering density is acceptable. Ensure pollinators are present and "
+            "consider a light boron foliar spray to support fruit set. Monitor "
+            "closely if weather is cold or wet during bloom."
+        ),
+        "details": (
+            "Flower cluster density is moderate — sufficient for a reasonable fruit "
+            "set but below peak density. Conditions may still support good yield if "
+            "pollination conditions are favourable."
         ),
     },
     "Sparse Clusters": {
@@ -175,9 +187,9 @@ _DISEASE_INFO: dict[str, dict] = {
             "improve fruit set and consult an agronomist about thinning strategy."
         ),
         "details": (
-            "Cluster density is below optimal levels. Sparse flowering may result in "
-            "reduced yield. Biennial bearing, environmental stress, or inadequate "
-            "chilling accumulation may be responsible."
+            "Cluster density is well below optimal levels. Sparse flowering is likely "
+            "to result in reduced yield. Biennial bearing, environmental stress, or "
+            "inadequate chilling accumulation may be responsible."
         ),
     },
     "No Clusters Detected": {
@@ -249,7 +261,8 @@ def _format_severity(pct: float) -> str:
 def _flower_severity(label: str) -> str:
     mapping = {
         "Healthy Clusters":      "None — clusters are abundant and healthy",
-        "Sparse Clusters":       "Moderate — cluster density is below optimal",
+        "Adequate Clusters":     "Low — cluster density is moderate but acceptable",
+        "Sparse Clusters":       "Moderate — cluster density is well below optimal",
         "No Clusters Detected":  "Severe — no flower clusters found in image",
     }
     return mapping.get(label, "Unknown")
@@ -482,8 +495,8 @@ async def predict(request: Request, file: UploadFile = File(...)):
 
     # ── flower_cluster branch ─────────────────────────────────────────────
     if image_type == "flower_cluster":
-        label, conf = predict_flowers(file_path)
-        info        = _get_info(label)
+        label, conf, flower_count = predict_flowers(file_path)
+        info                      = _get_info(label)
 
         return PredictionResponse(
             image_type   = "flower_cluster",
@@ -492,6 +505,7 @@ async def predict(request: Request, file: UploadFile = File(...)):
             confidence   = f"{conf * 100:.1f}%",
             recommendation = info["recommendation"],
             details      = info["details"],
+            flower_count = flower_count,
         )
 
     # ── fallback (should never be reached) ───────────────────────────────

@@ -104,6 +104,40 @@ export default function OutputBox({ result, previewUrl, onReset }: OutputBoxProp
             </>
           )}
 
+          {result.image_type === "flower_cluster" && result.flower_count !== undefined && (
+            <>
+              <div className="flex items-center gap-4">
+                <div
+                  className="flex flex-col items-center justify-center rounded-2xl px-5 py-3 shrink-0"
+                  style={{
+                    background: isHealthy
+                      ? "linear-gradient(135deg, #eaf5e7, #f3faf1)"
+                      : "linear-gradient(135deg, #fff4e3, #fff9f3)",
+                    border: `1px solid ${isHealthy ? "#c8e0c3" : "#efd4a0"}`,
+                  }}
+                >
+                  <span className={`text-[28px] font-bold leading-none ${isHealthy ? "text-[#2d5a27]" : "text-[#c47a10]"}`}>
+                    {result.flower_count}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#aaa] mt-1">Flowers</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#bbb] mb-1.5">Flower Count</p>
+                  <p className="text-[14px] font-medium text-[#333]">
+                    {result.flower_count === 0
+                      ? "No individual flowers detected in this image."
+                      : `${result.flower_count} individual flower${result.flower_count === 1 ? "" : "s"} detected by the model.`}
+                  </p>
+                  <p className="text-[11px] text-[#aaa] mt-1.5 leading-snug">
+                    Partially open buds and tightly overlapping flowers in dense clusters may not be counted.
+                  </p>
+                </div>
+              </div>
+
+              <div className="h-px bg-linear-to-r from-transparent via-[#ece8e2] to-transparent" />
+            </>
+          )}
+
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#bbb] mb-1.5">Findings</p>
             <p className="text-[14px] text-[#555] leading-[1.7]">{result.details}</p>

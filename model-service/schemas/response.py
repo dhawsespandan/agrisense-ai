@@ -3,7 +3,7 @@ schemas/response.py
 Pydantic request / response models for POST /predict.
 """
 
-from typing import Literal
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
@@ -31,6 +31,10 @@ class PredictionResponse(BaseModel):
     )
     details: str = Field(
         ..., description="Brief scientific explanation of the diagnosis"
+    )
+    flower_count: Optional[int] = Field(
+        default=None,
+        description="Number of individual flowers detected (flower_cluster images only)"
     )
 
 
