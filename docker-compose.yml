@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  model-service:
+    build: ./model-service
+    container_name: agrisense-model
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./model-service/.env
+    volumes:
+      - ./model-service/models:/app/models
+
+  server:
+    build: ./server
+    container_name: agrisense-server
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./server/.env
+    depends_on:
+      - model-service
+    environment:
+      - PYTHON_SERVICE_URL=http://model-service:8000
+
+  client:
+    build: ./client
+    container_name: agrisense-client
+    ports:
+      - "3000:80"
+    depends_on:
+      - server

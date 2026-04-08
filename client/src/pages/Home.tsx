@@ -26,7 +26,8 @@ export default function Home() {
       const formData = new FormData();
       formData.append("image", file);
 
-      const res = await fetch("/api/analyze", {
+      const apiBase = import.meta.env.VITE_API_URL ?? "";
+      const res = await fetch(`${apiBase}/api/analyze`, {
         method: "POST",
         body: formData,
       });

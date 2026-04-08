@@ -17,6 +17,7 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "agrisense-ai-server" });
 });
 
-app.listen(PORT, "127.0.0.1", () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+const HOST = process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
 });
