@@ -50,7 +50,7 @@ export default function Home() {
         throw new Error(msg);
       }
 
-      setResult(payload as DetectionResult);
+      setResult(payload as unknown as DetectionResult);
       setStatus("success");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong";
