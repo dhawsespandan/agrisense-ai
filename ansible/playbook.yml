@@ -1,0 +1,68 @@
+---
+- name: Configure Agrisense Runtime Environment
+  hosts: local
+  become: true
+
+  tasks:
+
+    - name: Install required packages
+      apt:
+        name:
+          - curl
+          - git
+        state: present
+        update_cache: true
+
+    - name: Create Agrisense group
+      group:
+        name: agrisense
+        state: present
+
+    - name: Create Agrisense user
+      user:
+        name: agrisense
+        group: agrisense
+        system: true
+        create_home: true
+        state: present
+
+    - name: Create Agrisense application directory
+      file:
+        path: /opt/agrisense
+        state: directory
+        owner: agrisense
+        group: agrisense
+        mode: "0755"
+
+    - name: Create configuration directory
+      file:
+        path: /opt/agrisense/config
+        state: directory
+        owner: agrisense
+        group: agrisense
+        mode: "0755"
+
+    - name: Create Agrisense environment configuration
+      copy:
+        dest: /opt/agrisense/config/app.env
+        owner: agrisense
+        group: agrisense
+        mode: "0644"
+        content: |
+          APP_NAME=agrisense-ai
+          APP_ENV=development
+          SERVER_PORT=5000
+          MODEL_SERVICE_PORT=8000
+
+    - name: Create deployment information file
+      copy:
+        dest: /opt/agrisense/config/deployment.txt
+        owner: agrisense
+        group: agrisense
+        mode: "0644"
+        content: |
+          Application: Agrisense AI
+          Managed by: Ansible
+          Environment: Development
+          Server Port: 5000
+          Model Service Port: 8000
